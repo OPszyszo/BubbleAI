@@ -1,604 +1,772 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Bubble AI</title>
+    <!-- Favicon z assets/logo.png -->
+    <link rel="icon" type="image/png" href="assets/logo.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none; /* lepsze dla bąbelków */
+        }
 
-<title>Bubble AI</title>
+        /* ---------- GLOBALNE ---------- */
+        :root {
+            --bg: #07111f;
+            --bg2: #0c1b2f;
+            --card: rgba(255,255,255,0.06);
+            --text: #ffffff;
+            --accent: #5cb8ff;
+            --border: rgba(255,255,255,0.08);
+        }
+        body.light {
+            --bg: #edf4ff;
+            --bg2: #d9e7ff;
+            --card: rgba(255,255,255,0.75);
+            --text: #111;
+            --accent: #267cff;
+            --border: rgba(0,0,0,0.08);
+        }
+        body {
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: radial-gradient(circle at top, var(--bg2), var(--bg));
+            color: var(--text);
+            transition: background 0.2s;
+        }
 
-<style>
+        /* ---------- KONTENER APLIKACJI (dwa widoki) ---------- */
+        .view {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        .hidden {
+            display: none !important;
+        }
 
-:root{
-    --bg:#07111f;
-    --bg2:#0c1b2f;
-    --card:rgba(255,255,255,0.06);
-    --text:#ffffff;
-    --accent:#5cb8ff;
-    --border:rgba(255,255,255,0.08);
-}
+        /* ---------- LOGIN VIEW (z bąbelkami) ---------- */
+        #loginView {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        #bubbleCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            cursor: crosshair;
+        }
+        .glass-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 480px;
+            background: rgba(10, 20, 35, 0.7);
+            backdrop-filter: blur(18px);
+            border-radius: 48px;
+            border: 1px solid rgba(92, 184, 255, 0.4);
+            box-shadow: 0 25px 45px rgba(0,0,0,0.4);
+            padding: 2rem 1.8rem;
+            z-index: 20;
+            transition: all 0.3s;
+        }
+        /* duże logo - logo_2.png */
+        .big-logo {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .big-logo img {
+            max-width: 85%;
+            height: auto;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+        }
+        .tab-bar {
+            display: flex;
+            gap: 12px;
+            margin: 20px 0 24px;
+            background: rgba(0,0,0,0.25);
+            border-radius: 100px;
+            padding: 5px;
+        }
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 12px 0;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            background: transparent;
+            color: rgba(255,255,255,0.7);
+        }
+        .tab.active {
+            background: rgba(92,184,255,0.35);
+            color: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .input-group {
+            margin-bottom: 18px;
+        }
+        .input-group input {
+            width: 100%;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 16px 18px;
+            border-radius: 36px;
+            font-size: 1rem;
+            color: white;
+            outline: none;
+        }
+        .input-group input:focus {
+            border-color: #5cb8ff;
+            background: rgba(255,255,255,0.12);
+        }
+        .input-group input::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+        .action-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #5cb8ff, #8f66ff);
+            border: none;
+            padding: 16px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: white;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: transform 0.2s;
+        }
+        .action-btn:hover {
+            transform: scale(1.02);
+        }
+        .info-text {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.6);
+        }
 
-body.light{
-    --bg:#edf4ff;
-    --bg2:#d9e7ff;
-    --card:rgba(255,255,255,0.75);
-    --text:#111;
-    --accent:#267cff;
-    --border:rgba(0,0,0,0.08);
-}
-
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
-
-body{
-    width:100%;
-    height:100vh;
-    overflow:hidden;
-    font-family:Segoe UI,sans-serif;
-    background:
-    radial-gradient(circle at top,var(--bg2),var(--bg));
-    color:var(--text);
-}
-
-/* APP */
-
-.app{
-    display:flex;
-    width:100%;
-    height:100vh;
-}
-
-/* SIDEBAR */
-
-.sidebar{
-    width:300px;
-    background:rgba(0,0,0,0.15);
-    border-right:1px solid var(--border);
-    backdrop-filter:blur(20px);
-    padding:20px;
-    display:flex;
-    flex-direction:column;
-    gap:16px;
-}
-
-.logo{
-    font-size:34px;
-    font-weight:800;
-    text-align:center;
-    margin-bottom:10px;
-}
-
-.logo span{
-    color:var(--accent);
-}
-
-.card{
-    background:var(--card);
-    border:1px solid var(--border);
-    border-radius:22px;
-    padding:18px;
-    backdrop-filter:blur(10px);
-}
-
-.card h3{
-    margin-bottom:14px;
-    font-size:15px;
-}
-
-input{
-    width:100%;
-    padding:14px;
-    border:none;
-    border-radius:14px;
-    outline:none;
-    background:rgba(255,255,255,0.08);
-    color:var(--text);
-    margin-bottom:10px;
-}
-
-button{
-    width:100%;
-    padding:14px;
-    border:none;
-    border-radius:14px;
-    cursor:pointer;
-    font-weight:700;
-    background:
-    linear-gradient(
-    135deg,
-    #5ab2ff,
-    #8f66ff
-    );
-    color:white;
-    transition:0.2s;
-}
-
-button:hover{
-    transform:scale(1.03);
-}
-
-.history{
-    flex:1;
-    overflow-y:auto;
-    display:flex;
-    flex-direction:column;
-    gap:10px;
-}
-
-.history-item{
-    background:rgba(255,255,255,0.05);
-    border-radius:12px;
-    padding:12px;
-    font-size:14px;
-}
-
-/* MAIN */
-
-.main{
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    position:relative;
-}
-
-.topbar{
-    height:80px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:0 25px;
-    border-bottom:1px solid var(--border);
-    backdrop-filter:blur(10px);
-}
-
-.model{
-    font-size:18px;
-    font-weight:700;
-}
-
-.user{
-    background:var(--card);
-    border:1px solid var(--border);
-    padding:10px 16px;
-    border-radius:12px;
-}
-
-.chat{
-    flex:1;
-    overflow-y:auto;
-    padding:30px;
-    display:flex;
-    flex-direction:column;
-    gap:18px;
-}
-
-/* MESSAGE */
-
-.message{
-    max-width:75%;
-    padding:18px;
-    border-radius:22px;
-    line-height:1.6;
-    animation:fade 0.25s ease;
-}
-
-.user-msg{
-    align-self:flex-end;
-    background:
-    linear-gradient(
-    135deg,
-    #5ab2ff,
-    #8f66ff
-    );
-    color:white;
-}
-
-.ai-msg{
-    align-self:flex-start;
-    background:var(--card);
-    border:1px solid var(--border);
-}
-
-/* INPUT */
-
-.bottom{
-    padding:20px;
-    display:flex;
-    gap:12px;
-    border-top:1px solid var(--border);
-}
-
-.bottom input{
-    margin:0;
-    flex:1;
-}
-
-.send-btn{
-    width:auto;
-    padding:14px 24px;
-}
-
-/* ANIM */
-
-@keyframes fade{
-    from{
-        opacity:0;
-        transform:translateY(10px);
-    }
-    to{
-        opacity:1;
-        transform:translateY(0);
-    }
-}
-
-/* MOBILE */
-
-@media(max-width:900px){
-
-    .sidebar{
-        display:none;
-    }
-
-    .message{
-        max-width:90%;
-    }
-
-}
-
-</style>
+        /* ---------- MAIN APP (czat) ---------- */
+        .app {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+        }
+        .sidebar {
+            width: 300px;
+            background: rgba(0,0,0,0.15);
+            border-right: 1px solid var(--border);
+            backdrop-filter: blur(20px);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        /* duże logo w sidebar (logo_2.png) */
+        .logo-img {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .logo-img img {
+            max-width: 100%;
+            height: auto;
+            max-height: 70px;
+            object-fit: contain;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 18px;
+            backdrop-filter: blur(10px);
+        }
+        .card h3 {
+            margin-bottom: 14px;
+            font-size: 15px;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            font-weight: 700;
+            background: linear-gradient(135deg, #5ab2ff, #8f66ff);
+            color: white;
+            transition: 0.2s;
+        }
+        button:hover {
+            transform: scale(1.02);
+        }
+        .conversations-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .conv-item {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 14px;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+        }
+        .conv-item.active-conv {
+            background: rgba(92,184,255,0.2);
+            border-left-color: var(--accent);
+        }
+        .conv-title {
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .topbar {
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 25px;
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+        }
+        .model {
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .user-area {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .user {
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 12px;
+        }
+        .logout-btn {
+            background: rgba(255,80,80,0.2);
+            color: #ff9e8f;
+            padding: 8px 14px;
+            width: auto;
+        }
+        .chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .message {
+            max-width: 75%;
+            padding: 18px;
+            border-radius: 22px;
+            line-height: 1.6;
+            animation: fade 0.25s ease;
+        }
+        .user-msg {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #5ab2ff, #8f66ff);
+            color: white;
+        }
+        .ai-msg {
+            align-self: flex-start;
+            background: var(--card);
+            border: 1px solid var(--border);
+        }
+        .ai-msg strong, .ai-msg em, .ai-msg code {
+            color: inherit;
+        }
+        .bottom {
+            padding: 20px;
+            display: flex;
+            gap: 12px;
+            border-top: 1px solid var(--border);
+        }
+        .bottom input {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 14px;
+            outline: none;
+            background: rgba(255,255,255,0.08);
+            color: var(--text);
+            margin: 0;
+        }
+        .send-btn {
+            width: auto;
+            padding: 14px 24px;
+        }
+        @keyframes fade {
+            from { opacity: 0; transform: translateY(10px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+        @media (max-width: 900px) {
+            .sidebar {
+                display: none;
+            }
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
 </head>
-
 <body>
 
-<div class="app">
-
-    <!-- SIDEBAR -->
-
-    <div class="sidebar">
-
-        <div class="logo">
-            Bubble<span>AI</span>
+<!-- WIDOK LOGOWANIA / REJESTRACJI -->
+<div id="loginView" class="view">
+    <canvas id="bubbleCanvas"></canvas>
+    <div class="glass-panel">
+        <div class="big-logo">
+            <img src="assets/logo_2.png" alt="Bubble AI Logo" onerror="this.style.display='none'">
         </div>
-
-        <div class="card">
-
-            <h3>Login / Register</h3>
-
-            <input
-            type="text"
-            id="username"
-            placeholder="Username"
-            >
-
-            <input
-            type="password"
-            id="password"
-            placeholder="Password"
-            >
-
-            <button onclick="login()">
-                Continue
-            </button>
-
+        <div class="tab-bar">
+            <div class="tab" data-tab="login">🔐 Logowanie</div>
+            <div class="tab" data-tab="register">✨ Rejestracja</div>
         </div>
-
-        <div class="card">
-
-            <h3>Model</h3>
-
-            <div class="history-item">
-                Bubble-1.4
+        <div id="loginForm">
+            <div class="input-group">
+                <input type="text" id="loginUsername" placeholder="Nazwa użytkownika">
             </div>
-
+            <div class="input-group">
+                <input type="password" id="loginPassword" placeholder="Hasło">
+            </div>
+            <button class="action-btn" id="doLoginBtn">➡ Zaloguj się</button>
         </div>
-
-        <div class="card">
-
-            <h3>Theme</h3>
-
-            <button onclick="toggleTheme()">
-                Dark / Light Mode
-            </button>
-
+        <div id="registerForm" style="display:none;">
+            <div class="input-group">
+                <input type="text" id="regUsername" placeholder="Nowa nazwa">
+            </div>
+            <div class="input-group">
+                <input type="password" id="regPassword" placeholder="Hasło">
+            </div>
+            <div class="input-group">
+                <input type="password" id="regConfirm" placeholder="Powtórz hasło">
+            </div>
+            <button class="action-btn" id="doRegisterBtn">✨ Załóż konto</button>
         </div>
-
-        <div class="card history" id="history">
-
-            <h3>Chat History</h3>
-
-        </div>
-
+        <div class="info-text">🔒 Twoje dane są przechowywane lokalnie</div>
     </div>
+</div>
 
-    <!-- MAIN -->
-
-    <div class="main">
-
-        <div class="topbar">
-
-            <div class="model">
-                Bubble-1.4
+<!-- WIDOK CZATU (główna aplikacja) -->
+<div id="chatView" class="view hidden">
+    <div class="app">
+        <div class="sidebar">
+            <div class="logo-img">
+                <img src="assets/logo_2.png" alt="Bubble AI" onerror="this.style.display='none'">
             </div>
-
-            <div class="user" id="userDisplay">
-                Not logged
+            <div class="card">
+                <h3>🧠 Model</h3>
+                <div>Bubble-1.4 (Markdown)</div>
             </div>
-
-        </div>
-
-        <!-- CHAT -->
-
-        <div class="chat" id="chat">
-
-            <div class="message ai-msg">
-                Hello ✨ I am Bubble-1.4
+            <div class="card">
+                <h3>🎨 Motyw</h3>
+                <button id="themeToggleBtn">☀️ Dark / Light</button>
             </div>
-
+            <div class="card" style="flex:1; display:flex; flex-direction:column;">
+                <h3>💬 Twoje rozmowy</h3>
+                <button id="newChatBtn" style="margin-bottom:14px;">+ Nowy Czat</button>
+                <div id="conversationsList" class="conversations-list"></div>
+            </div>
         </div>
-
-        <!-- INPUT -->
-
-        <div class="bottom">
-
-            <input
-            type="text"
-            id="messageInput"
-            placeholder="Ask Bubble AI..."
-            >
-
-            <button
-            class="send-btn"
-            onclick="sendMessage()"
-            >
-                Send
-            </button>
-
+        <div class="main">
+            <div class="topbar">
+                <div class="model">✨ Bubble-1.4 · Markdown</div>
+                <div class="user-area">
+                    <div class="user" id="userDisplay"></div>
+                    <button id="logoutBtn" class="logout-btn">Wyloguj</button>
+                </div>
+            </div>
+            <div class="chat" id="chat"></div>
+            <div class="bottom">
+                <input type="text" id="messageInput" placeholder="Zadaj pytanie... wspiera **markdown**">
+                <button class="send-btn" id="sendMsgBtn">Wyślij</button>
+            </div>
         </div>
-
     </div>
-
 </div>
 
 <script>
+    // ---------- KONFIGURACJA ----------
+    const API_URL = "https://bubble-ai-ivory.vercel.app/api/chat";
 
-/* BACKEND URL */
+    // ---------- BĄBELKI (loginView) ----------
+    const canvas = document.getElementById('bubbleCanvas');
+    let ctx = canvas.getContext('2d');
+    let bubbles = [];
+    let animFrame;
+    let width, height;
 
-const API_URL =
-"https://bubble-ai-ivory.vercel.app/api/chat";
-
-/* STORAGE */
-
-let chats =
-JSON.parse(
-localStorage.getItem("bubbleHistory")
-|| "[]"
-);
-
-let username =
-localStorage.getItem("bubbleUser")
-|| "";
-
-/* INIT */
-
-if(username){
-
-    document
-    .getElementById("userDisplay")
-    .innerText = username;
-
-}
-
-renderHistory();
-
-/* LOGIN */
-
-function login(){
-
-    const user =
-    document
-    .getElementById("username")
-    .value
-    .trim();
-
-    const pass =
-    document
-    .getElementById("password")
-    .value
-    .trim();
-
-    if(!user || !pass){
-        alert("Fill all fields");
-        return;
+    function random(min, max) { return min + Math.random() * (max - min); }
+    function createBubble(x, y, r, vx, vy) {
+        return { x, y, r, vx, vy, color: `hsla(${random(180, 240)}, 70%, 65%, 0.7)` };
+    }
+    function initBubbles() {
+        let arr = [];
+        for (let i = 0; i < 24; i++) {
+            let r = random(12, 38);
+            arr.push(createBubble(random(r, width - r), random(r, height - r), r, random(-0.9, 0.9), random(-0.9, 0.9)));
+        }
+        return arr;
+    }
+    function popBubble(index) {
+        if (index >= bubbles.length) return;
+        bubbles.splice(index, 1);
+        if (bubbles.length < 6) {
+            for (let i = 0; i < 4; i++) {
+                let r = random(12, 38);
+                bubbles.push(createBubble(random(r, width - r), random(r, height - r), r, random(-0.9, 0.9), random(-0.9, 0.9)));
+            }
+        }
+    }
+    function handleCollisions() {
+        let any = false;
+        for (let i = 0; i < bubbles.length; i++) {
+            for (let j = i+1; j < bubbles.length; j++) {
+                let a = bubbles[i], b = bubbles[j];
+                let dx = a.x - b.x, dy = a.y - b.y;
+                if (Math.hypot(dx, dy) < a.r + b.r) {
+                    popBubble(j);
+                    popBubble(i);
+                    any = true;
+                    break;
+                }
+            }
+            if (any) break;
+        }
+        return any;
+    }
+    function handleWall() {
+        let any = false;
+        for (let i=0; i<bubbles.length; i++) {
+            let b = bubbles[i];
+            if (b.x - b.r <= 0 || b.x + b.r >= width || b.y - b.r <= 0 || b.y + b.r >= height) {
+                popBubble(i);
+                any = true;
+                i--;
+            }
+        }
+        return any;
+    }
+    function moveBubbles() {
+        for (let b of bubbles) {
+            b.x += b.vx;
+            b.y += b.vy;
+            b.x = Math.min(Math.max(b.x, b.r), width - b.r);
+            b.y = Math.min(Math.max(b.y, b.r), height - b.r);
+        }
+    }
+    function drawBubbles() {
+        ctx.clearRect(0, 0, width, height);
+        for (let b of bubbles) {
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
+            ctx.fillStyle = b.color;
+            ctx.shadowBlur = 12;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.arc(b.x - b.r*0.2, b.y - b.r*0.2, b.r*0.2, 0, Math.PI*2);
+            ctx.fillStyle = 'rgba(255,255,255,0.8)';
+            ctx.fill();
+        }
+    }
+    function animateBubbles() {
+        moveBubbles();
+        let coll = true;
+        let iter = 0;
+        while (coll && iter++ < 5) {
+            coll = false;
+            if (handleCollisions()) coll = true;
+            if (handleWall()) coll = true;
+        }
+        drawBubbles();
+        animFrame = requestAnimationFrame(animateBubbles);
+    }
+    function resizeCanvas() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+        if (bubbles.length === 0) bubbles = initBubbles();
+        else {
+            for (let b of bubbles) {
+                b.x = Math.min(Math.max(b.x, b.r), width - b.r);
+                b.y = Math.min(Math.max(b.y, b.r), height - b.r);
+            }
+        }
+    }
+    canvas.addEventListener('click', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        const mouseY = (e.clientY - rect.top) * scaleY;
+        for (let i=0; i<bubbles.length; i++) {
+            let b = bubbles[i];
+            if (Math.hypot(mouseX - b.x, mouseY - b.y) < b.r) {
+                popBubble(i);
+                break;
+            }
+        }
+    });
+    window.addEventListener('resize', () => { resizeCanvas(); });
+    // uruchom bąbelki tylko gdy loginView jest widoczny (za chwilę)
+    
+    // ---------- LOGIKA LOGOWANIA I UŻYTKOWNIKÓW ----------
+    function getUsers() {
+        let raw = localStorage.getItem('bubble_users');
+        return raw ? JSON.parse(raw) : [];
+    }
+    function saveUsers(users) { localStorage.setItem('bubble_users', JSON.stringify(users)); }
+    function register(user, pass) {
+        let users = getUsers();
+        if (users.find(u => u.username === user)) return false;
+        users.push({ username: user, password: pass });
+        saveUsers(users);
+        return true;
+    }
+    function login(user, pass) {
+        let users = getUsers();
+        return !!users.find(u => u.username === user && u.password === pass);
     }
 
-    localStorage.setItem(
-        "bubbleUser",
-        user
-    );
+    // przełączanie widoków
+    const loginView = document.getElementById('loginView');
+    const chatView = document.getElementById('chatView');
+    let currentUser = null;
 
-    username = user;
-
-    document
-    .getElementById("userDisplay")
-    .innerText = user;
-
-    alert("Logged in!");
-
-}
-
-/* THEME */
-
-function toggleTheme(){
-
-    document.body.classList.toggle("light");
-
-    localStorage.setItem(
-        "bubbleTheme",
-
-        document.body.classList.contains("light")
-        ? "light"
-        : "dark"
-    );
-
-}
-
-const savedTheme =
-localStorage.getItem("bubbleTheme");
-
-if(savedTheme === "light"){
-
-    document.body.classList.add("light");
-
-}
-
-/* ADD MESSAGE */
-
-function addMessage(text,type){
-
-    const chat =
-    document
-    .getElementById("chat");
-
-    const div =
-    document.createElement("div");
-
-    div.className =
-    `message ${type}`;
-
-    div.innerText = text;
-
-    chat.appendChild(div);
-
-    chat.scrollTop =
-    chat.scrollHeight;
-
-}
-
-/* HISTORY */
-
-function saveHistory(message){
-
-    chats.unshift(message);
-
-    if(chats.length > 20){
-
-        chats.pop();
-
+    function showChatView() {
+        loginView.classList.add('hidden');
+        chatView.classList.remove('hidden');
+        if (animFrame) cancelAnimationFrame(animFrame);
+        initChatApp();
+    }
+    function showLoginView() {
+        chatView.classList.add('hidden');
+        loginView.classList.remove('hidden');
+        if (!ctx) ctx = canvas.getContext('2d');
+        resizeCanvas();
+        bubbles = initBubbles();
+        if (animFrame) cancelAnimationFrame(animFrame);
+        animateBubbles();
     }
 
-    localStorage.setItem(
-        "bubbleHistory",
-        JSON.stringify(chats)
-    );
+    // ---------- CZAT (konwersacje, markdown, API) ----------
+    let conversations = [];
+    let activeConvId = null;
 
-    renderHistory();
+    function formatMarkdown(text) {
+        let html = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        html = html.replace(/`(.*?)`/g, '<code style="background:rgba(0,0,0,0.2); padding:2px 6px; border-radius:8px;">$1</code>');
+        html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
+        html = html.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
+        html = html.replace(/^- (.*?)$/gm, '<li>$1</li>');
+        if (html.includes('<li>')) html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+        html = html.replace(/\n/g, '<br>');
+        return html;
+    }
 
-}
+    function addMessageToChatDOM(content, type, isMarkdown = true) {
+        const chatDiv = document.getElementById('chat');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${type}`;
+        if (type === 'ai-msg' && isMarkdown) msgDiv.innerHTML = formatMarkdown(content);
+        else msgDiv.innerText = content;
+        chatDiv.appendChild(msgDiv);
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
 
-function renderHistory(){
+    function loadUserConversations() {
+        const key = `bubble_conv_${currentUser}`;
+        const stored = localStorage.getItem(key);
+        if (stored) {
+            conversations = JSON.parse(stored);
+        } else {
+            conversations = [{
+                id: Date.now(),
+                title: "Witaj w Bubble AI",
+                messages: [{ role: "ai", content: "Cześć! Używam **markdown** – możesz pogrubiać, kursywę, listy. Zapytaj o coś!" }]
+            }];
+        }
+        if (!conversations.length) conversations.push({ id: Date.now(), title: "Nowy czat", messages: [] });
+        if (!activeConvId || !conversations.find(c => c.id === activeConvId)) activeConvId = conversations[0].id;
+        saveConversations();
+    }
+    function saveConversations() {
+        localStorage.setItem(`bubble_conv_${currentUser}`, JSON.stringify(conversations));
+    }
+    function renderConvList() {
+        const container = document.getElementById('conversationsList');
+        container.innerHTML = '';
+        conversations.forEach(conv => {
+            const div = document.createElement('div');
+            div.className = 'conv-item';
+            if (conv.id === activeConvId) div.classList.add('active-conv');
+            const titleSpan = document.createElement('div');
+            titleSpan.className = 'conv-title';
+            titleSpan.innerText = conv.title.length > 28 ? conv.title.slice(0,25)+'...' : conv.title;
+            div.appendChild(titleSpan);
+            div.addEventListener('click', () => switchConversation(conv.id));
+            container.appendChild(div);
+        });
+    }
+    function switchConversation(id) {
+        activeConvId = id;
+        renderConvList();
+        renderCurrentChat();
+    }
+    function renderCurrentChat() {
+        const chatDiv = document.getElementById('chat');
+        chatDiv.innerHTML = '';
+        const conv = conversations.find(c => c.id === activeConvId);
+        if (!conv) return;
+        for (let msg of conv.messages) {
+            const type = msg.role === 'user' ? 'user-msg' : 'ai-msg';
+            addMessageToChatDOM(msg.content, type, msg.role === 'ai');
+        }
+    }
+    async function sendMessage() {
+        const input = document.getElementById('messageInput');
+        const text = input.value.trim();
+        if (!text) return;
+        const conv = conversations.find(c => c.id === activeConvId);
+        if (!conv) return;
+        conv.messages.push({ role: 'user', content: text });
+        saveConversations();
+        renderCurrentChat();
+        input.value = '';
+        if (conv.messages.length === 1 && (conv.title === "Nowy czat" || conv.title === "Witaj w Bubble AI")) {
+            conv.title = text.length > 30 ? text.slice(0,27)+'...' : text;
+            renderConvList();
+        }
+        try {
+            const resp = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await resp.json();
+            const reply = data.reply || "Brak odpowiedzi.";
+            conv.messages.push({ role: 'ai', content: reply });
+            saveConversations();
+            renderCurrentChat();
+        } catch(err) {
+            conv.messages.push({ role: 'ai', content: "❌ Błąd połączenia z API." });
+            saveConversations();
+            renderCurrentChat();
+        }
+    }
+    function newConversation() {
+        const newId = Date.now();
+        conversations.unshift({ id: newId, title: "Nowy czat", messages: [] });
+        activeConvId = newId;
+        saveConversations();
+        renderConvList();
+        renderCurrentChat();
+    }
+    function toggleTheme() {
+        document.body.classList.toggle('light');
+        localStorage.setItem('bubbleTheme', document.body.classList.contains('light') ? 'light' : 'dark');
+    }
+    function initChatApp() {
+        if (!currentUser) return;
+        document.getElementById('userDisplay').innerText = currentUser;
+        loadUserConversations();
+        renderConvList();
+        renderCurrentChat();
+        document.getElementById('newChatBtn').onclick = () => newConversation();
+        document.getElementById('logoutBtn').onclick = () => {
+            localStorage.removeItem('bubble_current_user');
+            currentUser = null;
+            showLoginView();
+        };
+        document.getElementById('sendMsgBtn').onclick = sendMessage;
+        document.getElementById('messageInput').onkeydown = (e) => { if(e.key === 'Enter') sendMessage(); };
+        document.getElementById('themeToggleBtn').onclick = toggleTheme;
+        const savedTheme = localStorage.getItem('bubbleTheme');
+        if (savedTheme === 'light') document.body.classList.add('light');
+    }
 
-    const history =
-    document
-    .getElementById("history");
-
-    history.innerHTML =
-    "<h3>Chat History</h3>";
-
-    chats.forEach(msg => {
-
-        const div =
-        document.createElement("div");
-
-        div.className =
-        "history-item";
-
-        div.innerText = msg;
-
-        history.appendChild(div);
-
+    // ---------- UI logowania/rejestracji ----------
+    const loginTab = document.querySelector('[data-tab="login"]');
+    const regTab = document.querySelector('[data-tab="register"]');
+    const loginFormDiv = document.getElementById('loginForm');
+    const registerFormDiv = document.getElementById('registerForm');
+    function setActiveTab(tab) {
+        if (tab === 'login') {
+            loginTab.classList.add('active');
+            regTab.classList.remove('active');
+            loginFormDiv.style.display = 'block';
+            registerFormDiv.style.display = 'none';
+        } else {
+            regTab.classList.add('active');
+            loginTab.classList.remove('active');
+            loginFormDiv.style.display = 'none';
+            registerFormDiv.style.display = 'block';
+        }
+    }
+    loginTab.addEventListener('click', () => setActiveTab('login'));
+    regTab.addEventListener('click', () => setActiveTab('register'));
+    document.getElementById('doLoginBtn').addEventListener('click', () => {
+        const user = document.getElementById('loginUsername').value.trim();
+        const pass = document.getElementById('loginPassword').value.trim();
+        if (!user || !pass) return alert('Wypełnij pola');
+        if (login(user, pass)) {
+            currentUser = user;
+            localStorage.setItem('bubble_current_user', user);
+            showChatView();
+        } else alert('❌ Nieprawidłowe dane');
+    });
+    document.getElementById('doRegisterBtn').addEventListener('click', () => {
+        const user = document.getElementById('regUsername').value.trim();
+        const pass = document.getElementById('regPassword').value.trim();
+        const conf = document.getElementById('regConfirm').value.trim();
+        if (!user || !pass) return alert('Nazwa i hasło wymagane');
+        if (pass !== conf) return alert('Hasła różnią się');
+        if (pass.length < 3) return alert('Hasło minimum 3 znaki');
+        if (register(user, pass)) {
+            alert('✅ Konto utworzone! Zalogowano.');
+            currentUser = user;
+            localStorage.setItem('bubble_current_user', user);
+            showChatView();
+        } else alert('❌ Użytkownik już istnieje');
     });
 
-}
-
-/* SEND MESSAGE */
-
-async function sendMessage(){
-
-    const input =
-    document
-    .getElementById("messageInput");
-
-    const message =
-    input.value.trim();
-
-    if(!message) return;
-
-    addMessage(
-        message,
-        "user-msg"
-    );
-
-    saveHistory(message);
-
-    input.value = "";
-
-    try{
-
-        const response =
-        await fetch(API_URL,{
-
-            method:"POST",
-
-            headers:{
-                "Content-Type":
-                "application/json"
-            },
-
-            body:JSON.stringify({
-                message
-            })
-
-        });
-
-        const data =
-        await response.json();
-
-        addMessage(
-            data.reply ||
-            "No response",
-            "ai-msg"
-        );
-
-    }catch(err){
-
-        addMessage(
-            "Connection error.",
-            "ai-msg"
-        );
-
+    // start: jeśli ktoś zalogowany, od razu chat, inaczej login z bąbelkami
+    const savedUser = localStorage.getItem('bubble_current_user');
+    if (savedUser && getUsers().find(u => u.username === savedUser)) {
+        currentUser = savedUser;
+        showChatView();
+    } else {
+        showLoginView();
     }
-
-}
-
-/* ENTER */
-
-document
-.getElementById("messageInput")
-.addEventListener(
-"keydown",
-e => {
-
-    if(e.key === "Enter"){
-
-        sendMessage();
-
-    }
-
-});
-
 </script>
-
 </body>
 </html>
