@@ -12,8 +12,8 @@ export default async function handler(req, res) {
   try {
     let reply = "";
 
-    // Bubble 1.4 – zewnętrzne API (twoje wcześniejsze)
     if (model === "bubble1") {
+      // Bubble 1.4 – zewnętrzne API
       const response = await fetch("https://bubble-ai-ivory.vercel.app/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -21,9 +21,9 @@ export default async function handler(req, res) {
       });
       const data = await response.json();
       reply = data.reply || "Brak odpowiedzi z Bubble 1.4";
-    }
-    // Bubble 2.1 – Groq (klucz z zmiennych środowiskowych Vercel)
+    } 
     else if (model === "bubble2") {
+      // Bubble 2.1 – Groq
       const GROQ_API_KEY = process.env.GROQ_API_KEY;
       if (!GROQ_API_KEY) {
         throw new Error("Brak klucza GROQ_API_KEY w zmiennych środowiskowych");
@@ -54,8 +54,9 @@ export default async function handler(req, res) {
         throw new Error(data.error.message);
       }
       reply = data.choices?.[0]?.message?.content || "Brak odpowiedzi z Groq";
-    } else {
-      return res.status(400).json({ reply: "Nieznany model" });
+    } 
+    else {
+      return res.status(400).json({ reply: "Nieznany model – wybierz bubble1 lub bubble2" });
     }
 
     res.status(200).json({ reply });
