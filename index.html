@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Bubble AI – Wejście</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at 20% 30%, #0a0f2a, #030617);
+            position: relative;
+        }
+
+        /* CANVAS – pękające bąbelki */
+        #bubbleCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            z-index: 1;
+            cursor: crosshair;
+        }
+
+        /* KARTA LOGOWANIA / REJESTRACJI – nad bąbelkami */
+        .glass-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 460px;
+            background: rgba(10, 20, 35, 0.65);
+            backdrop-filter: blur(18px);
+            border-radius: 48px;
+            border: 1px solid rgba(92, 184, 255, 0.4);
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
+            padding: 2rem 1.8rem;
+            z-index: 20;
+            transition: all 0.3s ease;
+        }
+
+        .logo {
+            font-size: 2.8rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 1.2rem;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, #ffffff, #5cb8ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .logo span {
+            background: linear-gradient(135deg, #8f66ff, #5cb8ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .tab-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 28px;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 100px;
+            padding: 5px;
+        }
+
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 12px 0;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .tab.active {
+            background: rgba(92, 184, 255, 0.35);
+            backdrop-filter: blur(5px);
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .input-group {
+            margin-bottom: 18px;
+        }
+
+        .input-group input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 16px 18px;
+            border-radius: 36px;
+            font-size: 1rem;
+            color: white;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .input-group input:focus {
+            border-color: #5cb8ff;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .input-group input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .action-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #5cb8ff, #8f66ff);
+            border: none;
+            padding: 16px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: white;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .action-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 20px rgba(92, 184, 255, 0.4);
+        }
+
+        .info-text {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        @media (max-width: 500px) {
+            .glass-panel {
+                padding: 1.5rem;
+            }
+            .logo {
+                font-size: 2.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="bubbleCanvas"></canvas>
+
+<div class="glass-panel">
+    <div class="logo">Bubble<span>AI</span></div>
+    <div class="tab-bar">
+        <div class="tab" data-tab="login">🔐 Logowanie</div>
+        <div class="tab" data-tab="register">✨ Rejestracja</div>
+    </div>
+
+    <!-- FORMULARZ LOGOWANIA -->
+    <div id="loginForm" class="form-container">
+        <div class="input-group">
+            <input type="text" id="loginUsername" placeholder="Nazwa użytkownika">
+        </div>
+        <div class="input-group">
+            <input type="password" id="loginPassword" placeholder="Hasło">
+        </div>
+        <button class="action-btn" id="doLoginBtn">➡ Zaloguj się</button>
+        <div class="info-text">🌸 Po rejestracji trafisz do czatu</div>
+    </div>
+
+    <!-- FORMULARZ REJESTRACJI (początkowo ukryty) -->
+    <div id="registerForm" class="form-container" style="display: none;">
+        <div class="input-group">
+            <input type="text" id="regUsername" placeholder="Nowa nazwa użytkownika">
+        </div>
+        <div class="input-group">
+            <input type="password" id="regPassword" placeholder="Hasło">
+        </div>
+        <div class="input-group">
+            <input type="password" id="regConfirm" placeholder="Powtórz hasło">
+        </div>
+        <button class="action-btn" id="doRegisterBtn">✨ Załóż konto</button>
+        <div class="info-text">🔒 Bezpieczne przechowywanie w przeglądarce</div>
+    </div>
+</div>
+
+<script>
+    // ---------- BĄBELKI (pękające) ----------
+    const canvas = document.getElementById('bubbleCanvas');
+    const ctx = canvas.getContext('2d');
+    let bubbles = [];
+    let animationId = null;
+    let canvasWidth, canvasHeight;
+
+    // Ustawienia początkowe
+    const BUBBLE_COUNT = 22;
+    const MIN_RADIUS = 12;
+    const MAX_RADIUS = 38;
+    const BASE_SPEED = 0.8;
+
+    function random(min, max) {
+        return min + Math.random() * (max - min);
+    }
+
+    function createBubble(x, y, r, vx, vy) {
+        return {
+            x: x,
+            y: y,
+            r: r,
+            vx: vx,
+            vy: vy,
+            color: `hsla(${random(180, 240)}, 70%, 65%, 0.65)`
+        };
+    }
+
+    function initBubbles() {
+        const newBubbles = [];
+        for (let i = 0; i < BUBBLE_COUNT; i++) {
+            const radius = random(MIN_RADIUS, MAX_RADIUS);
+            const x = random(radius, canvasWidth - radius);
+            const y = random(radius, canvasHeight - radius);
+            const vx = random(-BASE_SPEED, BASE_SPEED);
+            const vy = random(-BASE_SPEED, BASE_SPEED);
+            newBubbles.push(createBubble(x, y, radius, vx, vy));
+        }
+        return newBubbles;
+    }
+
+    // PĘKANIE bąbelka – usuwamy go i dodajemy efekt “pyłku” (małe kropki)
+    function popBubble(index, fromClick = false) {
+        if (index >= bubbles.length) return;
+        const b = bubbles[index];
+        // Mały efekt wizualny (symulacja pęknięcia): animacja nie jest wymagana, ale można chwilowo narysować iskierki
+        // Usuwamy bąbelek
+        bubbles.splice(index, 1);
+        // Opcjonalnie: dodajemy nowy bąbelek w losowym miejscu, żeby nie było pusto? NIE – zgodnie z zasadą pękają i znikają.
+        // Jeśli zostanie ich za mało (np. < 4) – dorzucamy 3 nowe, żeby zabawa trwała dalej.
+        if (bubbles.length < 5) {
+            for (let i = 0; i < 4; i++) {
+                const radius = random(MIN_RADIUS, MAX_RADIUS);
+                const x = random(radius, canvasWidth - radius);
+                const y = random(radius, canvasHeight - radius);
+                const vx = random(-BASE_SPEED, BASE_SPEED);
+                const vy = random(-BASE_SPEED, BASE_SPEED);
+                bubbles.push(createBubble(x, y, radius, vx, vy));
+            }
+        }
+    }
+
+    // Sprawdzanie kolizji między bąbelkami (dotyk -> oba pękają)
+    function handleCollisions() {
+        for (let i = 0; i < bubbles.length; i++) {
+            const a = bubbles[i];
+            for (let j = i + 1; j < bubbles.length; j++) {
+                const b = bubbles[j];
+                const dx = a.x - b.x;
+                const dy = a.y - b.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist < a.r + b.r) {
+                    // pękają oba
+                    popBubble(j);
+                    popBubble(i);
+                    // ponieważ indeksy się zmieniły, musimy przerwać pętlę i zacząć od nowa
+                    return true; // sygnalizujemy kolizję, trzeba ponownie przeliczyć
+                }
+            }
+        }
+        return false;
+    }
+
+    // Sprawdzanie dotknięcia ściany (pękanie)
+    function handleWallCollisions() {
+        let anyPopped = false;
+        for (let i = 0; i < bubbles.length; i++) {
+            const b = bubbles[i];
+            let popped = false;
+            if (b.x - b.r <= 0 || b.x + b.r >= canvasWidth) {
+                popped = true;
+            } else if (b.y - b.r <= 0 || b.y + b.r >= canvasHeight) {
+                popped = true;
+            }
+            if (popped) {
+                popBubble(i);
+                anyPopped = true;
+                i--; // cofamy indeks po usunięciu
+            }
+        }
+        return anyPopped;
+    }
+
+    // Ruch bąbelków
+    function moveBubbles() {
+        for (let b of bubbles) {
+            b.x += b.vx;
+            b.y += b.vy;
+
+            // Normalnie odbicie? Nie! Przy dotknięciu ściany pękają, ale zanim to nastąpi,
+            // zapobiegamy wyjściu poza obszar? Właściwie to one mają pęknąć przy kontakcie.
+            // Aby nie uciekły całkiem: jeśli wyszły poza, to i tak zostaną obsłużone w wallCollisions.
+            // Utrzymujemy w granicach + margines, żeby nie uciekły na zawsze.
+            if (b.x - b.r < 0) b.x = b.r;
+            if (b.x + b.r > canvasWidth) b.x = canvasWidth - b.r;
+            if (b.y - b.r < 0) b.y = b.r;
+            if (b.y + b.r > canvasHeight) b.y = canvasHeight - b.r;
+        }
+    }
+
+    // Rysowanie
+    function draw() {
+        if (!ctx) return;
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+        // subtelne tło przezroczyste (by widać było radialny gradient body)
+        ctx.fillStyle = 'rgba(3, 6, 23, 0.2)';
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        
+        for (let b of bubbles) {
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+            ctx.fillStyle = b.color;
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = 'rgba(92, 184, 255, 0.5)';
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.arc(b.x - b.r * 0.2, b.y - b.r * 0.2, b.r * 0.2, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.fill();
+        }
+    }
+
+    // Główna pętla
+    function update() {
+        moveBubbles();
+        let collisionHappened = true;
+        let maxIter = 10;
+        while (collisionHappened && maxIter-- > 0) {
+            collisionHappened = false;
+            if (handleCollisions()) collisionHappened = true;
+            if (handleWallCollisions()) collisionHappened = true;
+        }
+        draw();
+        animationId = requestAnimationFrame(update);
+    }
+
+    function resizeCanvas() {
+        canvasWidth = window.innerWidth;
+        canvasHeight = window.innerHeight;
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        // odtwórz bąbelki przy zmianie rozmiaru (zachowaj w miarę)
+        if (bubbles.length === 0 || canvasWidth > 0) {
+            bubbles = initBubbles();
+        } else {
+            // dostosuj pozycje
+            for (let b of bubbles) {
+                b.x = Math.min(Math.max(b.x, b.r), canvasWidth - b.r);
+                b.y = Math.min(Math.max(b.y, b.r), canvasHeight - b.r);
+            }
+        }
+    }
+
+    // Kliknięcie na bąbelku (wykrywanie)
+    function handleCanvasClick(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        const mouseY = (e.clientY - rect.top) * scaleY;
+        
+        for (let i = 0; i < bubbles.length; i++) {
+            const b = bubbles[i];
+            const dx = mouseX - b.x;
+            const dy = mouseY - b.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist <= b.r) {
+                popBubble(i);
+                break;
+            }
+        }
+    }
+
+    canvas.addEventListener('click', handleCanvasClick);
+    window.addEventListener('resize', () => {
+        resizeCanvas();
+    });
+    resizeCanvas();
+    update();
+
+    // ---------- LOGOWANIE / REJESTRACJA (localStorage) ----------
+    // Klucz: "bubble_users" – tablica {username, password}
+    let activeTab = 'login';
+
+    function getUsers() {
+        const raw = localStorage.getItem('bubble_users');
+        if (!raw) return [];
+        try {
+            return JSON.parse(raw);
+        } catch(e) { return []; }
+    }
+
+    function saveUsers(users) {
+        localStorage.setItem('bubble_users', JSON.stringify(users));
+    }
+
+    function registerUser(username, password) {
+        const users = getUsers();
+        if (users.find(u => u.username === username)) {
+            alert('❌ Nazwa użytkownika już istnieje!');
+            return false;
+        }
+        users.push({ username, password });
+        saveUsers(users);
+        return true;
+    }
+
+    function loginUser(username, password) {
+        const users = getUsers();
+        const found = users.find(u => u.username === username && u.password === password);
+        if (found) {
+            localStorage.setItem('bubble_current_user', username);
+            return true;
+        }
+        return false;
+    }
+
+    // UI przełączanie zakładek
+    const loginDiv = document.getElementById('loginForm');
+    const registerDiv = document.getElementById('registerForm');
+    const tabs = document.querySelectorAll('.tab');
+
+    function setActiveTab(tabId) {
+        activeTab = tabId;
+        tabs.forEach(tab => {
+            if (tab.getAttribute('data-tab') === tabId) {
+                tab.classList.add('active');
+            } else {
+                tab.classList.remove('active');
+            }
+        });
+        if (tabId === 'login') {
+            loginDiv.style.display = 'block';
+            registerDiv.style.display = 'none';
+        } else {
+            loginDiv.style.display = 'none';
+            registerDiv.style.display = 'block';
+        }
+    }
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const id = tab.getAttribute('data-tab');
+            setActiveTab(id);
+        });
+    });
+
+    // Logowanie
+    document.getElementById('doLoginBtn').addEventListener('click', () => {
+        const user = document.getElementById('loginUsername').value.trim();
+        const pass = document.getElementById('loginPassword').value.trim();
+        if (!user || !pass) {
+            alert('Wypełnij oba pola');
+            return;
+        }
+        if (loginUser(user, pass)) {
+            // przekieruj do main.html
+            window.location.href = 'main.html';
+        } else {
+            alert('❌ Błędny login lub hasło');
+        }
+    });
+
+    // Rejestracja
+    document.getElementById('doRegisterBtn').addEventListener('click', () => {
+        const user = document.getElementById('regUsername').value.trim();
+        const pass = document.getElementById('regPassword').value.trim();
+        const confirm = document.getElementById('regConfirm').value.trim();
+        if (!user || !pass) {
+            alert('Nazwa i hasło wymagane');
+            return;
+        }
+        if (pass !== confirm) {
+            alert('Hasła nie są zgodne');
+            return;
+        }
+        if (pass.length < 3) {
+            alert('Hasło musi mieć co najmniej 3 znaki');
+            return;
+        }
+        if (registerUser(user, pass)) {
+            // automatyczne zalogowanie po rejestracji
+            localStorage.setItem('bubble_current_user', user);
+            alert('✅ Konto utworzone! Przechodzimy do czatu.');
+            window.location.href = 'main.html';
+        }
+    });
+
+    // walidacja: jeśli ktoś jest już zalogowany, niech idzie od razu do main? (ale to ekran logowania)
+    if (localStorage.getItem('bubble_current_user')) {
+        // opcjonalnie: automatyczne przekierowanie? Może być denerwujące, ale bezpieczniej:
+        // window.location.href = 'main.html';
+        // jednak zostawiam wybór użytkownikowi. Można odkomentować:
+        // window.location.href = 'main.html';
+    }
+</script>
+</body>
+</html>
