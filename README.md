@@ -1,2 +1,2 @@
 # BubbleAI
-Bańka, your helpful new assistant
+Bubble, your helpful new assistant
